@@ -27,11 +27,13 @@ const pairSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    phase: { type: String, default: "one", enum: ["one", "two", "three"] },
   },
   { timestamps: true },
 );
 
 pairSchema.index({ volume24h: 1, tradable: 1 });
 pairSchema.index({ symbol: 1 });
+pairSchema.index({ phase: 1 });
 
 module.exports = mongoose.model("FuturesPair", pairSchema);

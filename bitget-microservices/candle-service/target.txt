@@ -1,0 +1,13 @@
+When a coin gets activated ( last24HoursVolume > 30M ):
+
+-	start listening candles
+
+-	Fill candles till-last : Max ( activation time, last candle saving time )
+
+-	save every candle on 2 minute candle closing
+
+
+
+When a coin get deactivated ( last24HoursVolume < 25M ):
+
+- 	stop listenening candles
