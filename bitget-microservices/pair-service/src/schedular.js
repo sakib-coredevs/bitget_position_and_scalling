@@ -8,7 +8,8 @@ setInterval(async () => {
     await pairService.syncBitgetPairs();
     await pairService.syncFuturesPairVolume24h();
     await pairService.evaluateTradablePairs();
+    await pairService.evaluateCandleListeningPairs();
   } catch (err) {
-    logger.error("Error in schedular: " + err.message);
+    logger.error("Error in scheduler: " + err.message);
   }
 }, INTERVAL);

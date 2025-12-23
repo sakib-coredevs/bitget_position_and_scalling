@@ -1,7 +1,7 @@
 const { Schema } = require("mongoose");
 
-const candleSchema = new Schema({
-  pair: { type: Schema.Types.ObjectId, ref: "FuturesPair", required: true },
+const candle2mSchema = new Schema({
+  pair: { type: String, required: true },
   open: { type: Number, required: true },
   close: { type: Number, required: true },
   high: { type: Number, required: true },
@@ -10,9 +10,9 @@ const candleSchema = new Schema({
   timestamp: { type: Date, required: true },
 });
 
-candleSchema.index({ pair: 1, timestamp: 1 }, { unique: true });
-candleSchema.index({ timestamp: 1 });
-candleSchema.index({ pair: 1 });
-candleSchema.index({ pair: 1, timestamp: -1 });
+candle2mSchema.index({ pair: 1, timestamp: 1 }, { unique: true });
+candle2mSchema.index({ timestamp: 1 });
+candle2mSchema.index({ pair: 1 });
+candle2mSchema.index({ pair: 1, timestamp: -1 });
 
-module.exports = mongoose.model("Candle", candleSchema);
+module.exports = mongoose.model("Candle2m", candle2mSchema);

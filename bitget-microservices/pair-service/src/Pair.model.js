@@ -28,6 +28,7 @@ const pairSchema = new mongoose.Schema(
       default: false,
     },
     phase: { type: String, default: "one", enum: ["one", "two", "three"] },
+    candleListening: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
