@@ -1,8 +1,8 @@
 const Candle2m = require("./Candle.model");
 
 class DbOperations {
-  async getSavedCandlesLast12Hours(pair) {
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+  async getSavedCandlesLast12Hours(pair, mostLast12hoursBeforeTimestamp) {
+    const twelveHoursAgo = new Date(mostLast12hoursBeforeTimestamp);
 
     const candles = await Candle2m.find({
       pair: pair,
@@ -12,8 +12,9 @@ class DbOperations {
       .sort({ timestamp: 1 })
       .lean();
 
-    console.log("Fetched candles from DB:", candles);
-    return candles.map((c) => c.timestamp);
+    console.log("Fetched candles from DB:", candles.length);
+
+    return candles.map((c) => c.timestamp.getTime());
   }
 
   async insertMissingCandles(pair, missingCandles) {

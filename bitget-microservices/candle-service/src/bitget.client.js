@@ -8,9 +8,9 @@ class BitgetClient {
     });
   }
 
-  async fetchFuturesPairs(symbol, limit) {
+  async getCandles(symbol, startTime, endTime) {
     const res = await this.http.get("/api/v2/mix/market/candles", {
-      params: { productType: "usdt-futures", granularity: "1m", symbol, limit },
+      params: { productType: "usdt-futures", granularity: "1m", symbol, startTime, endTime, limit: 1000 },
     });
 
     return res.data?.data || [];
