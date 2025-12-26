@@ -1,0 +1,24 @@
+NEW_FUTURES_PAIR -> {
+            exchange: "BITGET",
+            symbol: pair.symbol,
+          }
+
+PAIR_TRADABLE_ON -> {
+              exchange: pair.exchange,
+              symbol: pair.symbol,
+            }
+
+PAIR_TRADABLE_OFF -> {
+              exchange: pair.exchange,
+              symbol: pair.symbol,
+            }
+
+PAIR_CANDLE_LISTENING_ON -> {
+              exchange: pair.exchange,
+              symbol: pair.symbol,
+            }
+
+PAIR_CANDLE_LISTENING_OFF -> {
+              exchange: pair.exchange,
+              symbol: pair.symbol,
+            }

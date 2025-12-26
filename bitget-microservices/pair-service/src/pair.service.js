@@ -169,17 +169,17 @@ class PairService {
       if (pairsToListen.length > 0) {
         await Pair.updateMany({ _id: { $in: pairsToListen.map((p) => p._id) } }, { $set: { candleListening: true } });
 
-        for (const pair of pairsToListen) {
-          await redis.publish(
-            "PAIR_CANDLE_LISTENING_ON",
-            JSON.stringify({
-              exchange: pair.exchange,
-              symbol: pair.symbol,
-            }),
-          );
+        // for (const pair of pairsToListen) {
+        //   await redis.publish(
+        //     "PAIR_CANDLE_LISTENING_ON",
+        //     JSON.stringify({
+        //       exchange: pair.exchange,
+        //       symbol: pair.symbol,
+        //     }),
+        //   );
 
-          logger.info(`Candle Listening ON: ${pair.symbol}; Volume24h: ${pair.volume24h}`);
-        }
+        //   logger.info(`Candle Listening ON: ${pair.symbol}; Volume24h: ${pair.volume24h}`);
+        // }
       }
 
       const pairsToStopListening = await Pair.find(
@@ -196,17 +196,17 @@ class PairService {
           { $set: { candleListening: false } },
         );
 
-        for (const pair of pairsToStopListening) {
-          await redis.publish(
-            "PAIR_CANDLE_LISTENING_OFF",
-            JSON.stringify({
-              exchange: pair.exchange,
-              symbol: pair.symbol,
-            }),
-          );
+        // for (const pair of pairsToStopListening) {
+        //   await redis.publish(
+        //     "PAIR_CANDLE_LISTENING_OFF",
+        //     JSON.stringify({
+        //       exchange: pair.exchange,
+        //       symbol: pair.symbol,
+        //     }),
+        //   );
 
-          logger.info(`Candle Listening OFF: ${pair.symbol}; Volume24h: ${pair.volume24h}`);
-        }
+        //   logger.info(`Candle Listening OFF: ${pair.symbol}; Volume24h: ${pair.volume24h}`);
+        // }
       }
 
       logger.info("[PAIR-SERVICE] Candle Listening status evaluated");
