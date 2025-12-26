@@ -7,7 +7,10 @@ class CandleBackfill {
     const mostLast12hoursBeforeTimestamp =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
     const savedTimeStamps = await dbOperations.getSavedCandlesLast12Hours(symbol, mostLast12hoursBeforeTimestamp);
+
     this.printTimestamp(`Fetched db timestams for ${symbol}`, savedTimeStamps);
+
+    console.log(savedTimeStamps);
 
     const missingTimestamps = this.identifyMissingTimestamps(savedTimeStamps);
     const leastTimestamp = Math.min(...missingTimestamps);
@@ -101,8 +104,8 @@ class CandleBackfill {
 
   printTimestamp(timestampfor, timestamps) {
     const len = timestamps.length;
-    const firstTimestamp = timestamps[0] ? new Date(timestampfor[0]).toISOString() : "NULL";
-    const lastTimestamp = timestamps[len - 1] ? new Date(timestampfor[len - 1]).toISOString() : "NULL";
+    const firstTimestamp = timestamps[0] ? new Date(timestamps[0]).toISOString() : "NULL";
+    const lastTimestamp = timestamps[len - 1] ? new Date(timestamps[len - 1]).toISOString() : "NULL";
     console.log(timestampfor);
     console.log(`Total ${len} timestams; ${firstTimestamp} - ${lastTimestamp}`);
   }

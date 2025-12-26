@@ -3,19 +3,29 @@ const Candle2m = require("./Candle.model");
 
 class DbOperations {
   async getSavedCandlesLast12Hours(pair, mostLast12hoursBeforeTimestamp) {
-    const twelveHoursAgo = new Date(mostLast12hoursBeforeTimestamp);
+    console.log("Input params:", { pair, fromCandle: new Date(mostLast12hoursBeforeTimestamp).toISOString() });
 
     const candles = await Candle2m.find({
       pair: pair,
-      timestamp: { $gte: twelveHoursAgo },
+      timestamp: { $gte: mostLast12hoursBeforeTimestamp },
     })
       .select("timestamp")
       .sort({ timestamp: 1 })
       .lean();
 
-    console.log("Fetched candles from DB:", candles.length);
+    console.log("Filtered candles count:", candles.length);
 
-    return candles.map((c) => c.timestamp.getTime());
+    return candles.map((c) => c.timestamp);
+  }
+
+  async lastXCandlesForAPair(pair, limit) {
+    const candles = await Candle2m.find({ pair: pair })
+      .select("timestamp open close high low volume")
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+
+    return candles;
   }
 
   async insertMissingCandles(pair, missingCandles) {
@@ -37,6 +47,11 @@ class DbOperations {
       timestamp: candle[0],
     }));
 
+    console.log(
+      `${new Date(candlesToInsert[0].timestamp).toISOString()} - ${new Date(
+        candlesToInsert[candlesToInsert.length - 1].timestamp,
+      ).toISOString()}`,
+    );
     try {
       const result = await Candle2m.insertMany(candlesToInsert, {
         ordered: false,

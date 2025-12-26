@@ -7,7 +7,7 @@ const candle2mSchema = new Schema({
   high: { type: Number, required: true },
   low: { type: Number, required: true },
   volume: { type: Number, required: true },
-  timestamp: { type: Date, required: true },
+  timestamp: { type: Number, required: true }, // Date theke Number
 });
 
 candle2mSchema.index({ pair: 1, timestamp: 1 }, { unique: true });

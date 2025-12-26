@@ -1,0 +1,110 @@
+const dbOperations = require("./db.operations");
+
+class Test {
+  async testCandles() {
+    const pairs = await this.getCandleListeningPairs();
+    for (const pair of pairs) {
+      await this.evaluateCandlesIntegrity(pair);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
+  async evaluateCandlesIntegrity(pair) {
+    console.log("\n");
+
+    const mostLast12hoursBeforeTimestamp =
+      Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
+    const candles = await dbOperations.getSavedCandlesLast12Hours(pair, mostLast12hoursBeforeTimestamp);
+    console.log(`Fetched ${candles.length} DBcandles; Pair: ${pair}`);
+
+    // this.printTimestamps(
+    //   pair,
+    //   candles.map((c) => c.timestamp),
+    // );
+
+    this.checkIntegrity(candles, pair);
+  }
+
+  checkIntegrity(candles, pair) {
+    const numberOfCandles = candles.length;
+    const startTimestamp = Math.min(...candles);
+    const endTimestamp = Math.max(...candles);
+    const candlesSet = new Set(candles);
+
+    const isValidStartTimestamp = (startTimestamp / (60 * 1000 * 2)) % 2 !== 0;
+    const isValidEndTimestamp = (endTimestamp / (60 * 1000 * 2)) % 2 !== 0;
+
+    console.log(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours) -----------`);
+
+    if (!isValidStartTimestamp) {
+      console.warn(`startTimestamp (${new Date(startTimestamp).toString()}) is not valid (odd minute)`);
+      return;
+    }
+
+    if (!isValidEndTimestamp) {
+      console.warn(`endTimestamp (${new Date(endTimestamp).toString()}) is not valid (odd minute)`);
+      return;
+    }
+
+    let duplicateTimestamps = candles.length - candlesSet.size;
+
+    if (duplicateTimestamps > 0) {
+      console.warn(`Duplicate candles: ${duplicateTimestamps}`);
+      return;
+    }
+
+    let oddTimestamps = 0;
+    for (const ts of candlesSet) {
+      if ((ts / (2 * 60 * 1000)) % 2 !== 0) oddTimestamps++;
+    }
+
+    if (oddTimestamps > 0) {
+      console.warn(`Invalid: ${oddTimestamps} odd timestamps found`);
+      return;
+    }
+
+    // Calculate expected number of candles between start and end
+    const expectedCandles = Math.floor((endTimestamp - startTimestamp) / (2 * 60 * 1000)) + 1;
+    let notFoundTimestamps = 0;
+
+    for (let i = 0; i < expectedCandles; i++) {
+      const ts = startTimestamp + i * (2 * 60 * 1000);
+      if (!candlesSet.has(ts)) {
+        notFoundTimestamps++;
+      }
+    }
+
+    if (notFoundTimestamps > 0) {
+      console.log(`Found ${notFoundTimestamps} missing candles`);
+      return;
+    }
+
+    console.log(`12 hours DB Candles timestamps: ${numberOfCandles}`);
+    console.log(`Start Candle Time: ${new Date(startTimestamp).toString()}`);
+    console.log(`End Candle Time: ${new Date(endTimestamp).toString()}`);
+    console.log("All the Candles are valid.");
+    console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
+    console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
+    console.log(`-------------------------------END-------------------------------`);
+    console.log("\n\n");
+  }
+
+  async getCandleListeningPairs() {
+    const pairs = await dbOperations.getCandleListeningPairs();
+    return pairs;
+  }
+
+  printTimestamps(pair, ts) {
+    console.log(`Printing ${ts.length} timestams for ${pair}`);
+    if (ts.length === 0) {
+      console.log(`From --; To --`);
+      return;
+    }
+    const maxTimest = new Date(Math.max(...ts)).toISOString();
+    const minTimest = new Date(Math.min(...ts)).toISOString();
+
+    console.log(`From: ${minTimest} To: ${maxTimest}`);
+  }
+}
+
+module.exports = new Test();
