@@ -3,13 +3,14 @@ const dbOperations = require("./db.operations");
 
 class CandleService {
   constructor() {
-    this.candleListeningPairs = new Set();
+    this.candleListeningPairsSet = new Set();
+    this.erroredPairsOnTurningOn = [];
   }
 
   //   async setCandleListeningPairsInitially() {
   //     const pairs = await this.getCandleListeningPairs();
-  //     for (const symbol of pairs) {
-  //       this.candleListeningPairs.add(symbol);
+  //     for (const pair of pairs) {
+  //       this.candleListeningPairsSet.add(pair);
   //     }
   //   }
 
@@ -20,16 +21,16 @@ class CandleService {
       const stoppedPairs = this.getStoppedCandleListeningPairs(pairs);
 
       console.log("Evaluating candle listening pairs...");
-      console.log(`Current candle listening pairs: ${[...this.candleListeningPairs].join(", ")}`);
+      console.log(`Current candle listening pairs: ${[...this.candleListeningPairsSet].join(", ")}`);
       console.log(`New candle listening pairs: ${newPairs.join(", ")}`);
       console.log(`Stopped candle listening pairs: ${stoppedPairs.join(", ")}`);
 
-      for (const symbol of newPairs) {
-        this.addCandleListeningPair(symbol);
+      for (const pair of newPairs) {
+        this.addCandleListeningPair(pair);
       }
 
-      for (const symbol of stoppedPairs) {
-        this.removeCandleListeningPair(symbol);
+      for (const pair of stoppedPairs) {
+        this.removeCandleListeningPair(pair);
       }
 
       this.turnOnCandleListening(newPairs);
@@ -41,27 +42,43 @@ class CandleService {
     }
   }
 
-  turnOnCandleListening(symbols) {
-    let i = 0;
-    for (const symbol of symbols) {
-      // Logic to turn on candle listening for the symbol
+  turnOnCandleListening(pairs) {
+    const chunkArray = this.getChunkArray(pairs, 5);
+    let j = 0;
+    for (const pairChunk of chunkArray) {
+      let i = 0;
+      const nextJth2mCandleTimestamp =
+        Math.floor(Date.now() / (2 * 60 * 1000)) * 2 * 60 * 1000 + 2 * 60 * 1000 * (j + 1);
+      for (const pair of pairChunk) {
+        const callBackDelay = nextJth2mCandleTimestamp - Date.now() + i * 10_000;
+        console.log(`Turning on candle listening for ${pair} after ${callBackDelay / 1000}s`);
 
-      const mostImmediateCandleTimestampNext = Math.floor(Date.now() / (2 * 60 * 1000)) * 2 * 60 * 1000 + 2 * 60 * 1000;
-
-      const callBackDelay = mostImmediateCandleTimestampNext - Date.now() + i * 5000;
-      console.log(`Turning on candle listening for ${symbol} after ${callBackDelay / 1000}s`);
-
-      setTimeout(async () => {
-        await candleBackfill.backfillMissingCandles(symbol);
-      }, callBackDelay);
-
-      i++;
+        setTimeout(
+          async () => {
+            try {
+              await candleBackfill.backfillMissingCandles(pair);
+              console.log(`Turning on ${pair} has completed!`);
+            } catch (err) {
+              console.log(`Turning on ${pair} not completed!`);
+              console.log(err);
+              if (!this.erroredPairsOnTurningOn.includes(pair)) {
+                this.erroredPairsOnTurningOn.push(pair);
+                setTimeout(() => this.turnOnCandleListening([pair]), 5_000);
+              }
+            }
+          },
+          callBackDelay,
+          pair,
+        );
+        i++;
+      }
+      j++;
     }
   }
 
-  turnOffCandleListening(symbols) {
-    for (const symbol of symbols) {
-      // Logic to turn off candle listening for the symbol
+  turnOffCandleListening(pairs) {
+    for (const pair of pairs) {
+      // Logic to turn off candle listening for the pair
     }
   }
 
@@ -72,9 +89,9 @@ class CandleService {
 
   getNewCandleListeningPairs(latestPairs) {
     const newPairs = [];
-    for (const symbol of latestPairs) {
-      if (!this.candleListeningPairs.has(symbol)) {
-        newPairs.push(symbol);
+    for (const pair of latestPairs) {
+      if (!this.candleListeningPairsSet.has(pair)) {
+        newPairs.push(pair);
       }
     }
     return newPairs;
@@ -82,24 +99,32 @@ class CandleService {
 
   getStoppedCandleListeningPairs(latestPairs) {
     const stoppedPairs = [];
-    for (const symbol of this.candleListeningPairs) {
-      if (!latestPairs.includes(symbol)) {
-        stoppedPairs.push(symbol);
+    for (const pair of this.candleListeningPairsSet) {
+      if (!latestPairs.includes(pair)) {
+        stoppedPairs.push(pair);
       }
     }
     return stoppedPairs;
   }
 
-  addCandleListeningPair(symbol) {
-    this.candleListeningPairs.add(symbol);
+  getChunkArray(pairs, n) {
+    const result = [];
+    for (let i = 0; i < pairs.length; i += n) {
+      result.push(pairs.slice(i, i + n));
+    }
+    return result;
   }
 
-  removeCandleListeningPair(symbol) {
-    this.candleListeningPairs.delete(symbol);
+  addCandleListeningPair(pair) {
+    this.candleListeningPairsSet.add(pair);
   }
 
-  isCandleListeningPair(symbol) {
-    return this.candleListeningPairs.has(symbol);
+  removeCandleListeningPair(pair) {
+    this.candleListeningPairsSet.delete(pair);
+  }
+
+  isCandleListeningPair(pair) {
+    return this.candleListeningPairsSet.has(pair);
   }
 }
 

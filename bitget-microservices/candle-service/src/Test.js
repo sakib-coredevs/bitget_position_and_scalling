@@ -10,31 +10,30 @@ class Test {
   }
 
   async evaluateCandlesIntegrity(pair) {
-    console.log("\n");
+    console.log("\n\n\n\n");
 
-    const mostLast12hoursBeforeTimestamp =
+    const timeStampOf12hoursBeforeCandle =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
-    const candles = await dbOperations.getSavedCandlesLast12Hours(pair, mostLast12hoursBeforeTimestamp);
-    console.log(`Fetched ${candles.length} DBcandles; Pair: ${pair}`);
+    const timestamps = await dbOperations.getDBTimestampsLast12Hours(pair, timeStampOf12hoursBeforeCandle);
 
     // this.printTimestamps(
     //   pair,
-    //   candles.map((c) => c.timestamp),
+    //   timestamps.map((c) => c.timestamp),
     // );
 
-    this.checkIntegrity(candles, pair);
+    this.checkIntegrity(timestamps, pair);
   }
 
-  checkIntegrity(candles, pair) {
-    const numberOfCandles = candles.length;
-    const startTimestamp = Math.min(...candles);
-    const endTimestamp = Math.max(...candles);
-    const candlesSet = new Set(candles);
+  checkIntegrity(timestamps, pair) {
+    const numberOfCandles = timestamps.length;
+    const startTimestamp = Math.min(...timestamps);
+    const endTimestamp = Math.max(...timestamps);
+    const timestampsSet = new Set(timestamps);
 
     const isValidStartTimestamp = (startTimestamp / (60 * 1000 * 2)) % 2 !== 0;
     const isValidEndTimestamp = (endTimestamp / (60 * 1000 * 2)) % 2 !== 0;
 
-    console.log(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours) -----------`);
+    console.log(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours candle's) -----------`);
 
     if (!isValidStartTimestamp) {
       console.warn(`startTimestamp (${new Date(startTimestamp).toString()}) is not valid (odd minute)`);
@@ -46,15 +45,15 @@ class Test {
       return;
     }
 
-    let duplicateTimestamps = candles.length - candlesSet.size;
+    let duplicateTimestamps = timestamps.length - timestampsSet.size;
 
     if (duplicateTimestamps > 0) {
-      console.warn(`Duplicate candles: ${duplicateTimestamps}`);
+      console.warn(`Number of duplicate timestamps: ${duplicateTimestamps}`);
       return;
     }
 
     let oddTimestamps = 0;
-    for (const ts of candlesSet) {
+    for (const ts of timestampsSet) {
       if ((ts / (2 * 60 * 1000)) % 2 !== 0) oddTimestamps++;
     }
 
@@ -63,29 +62,37 @@ class Test {
       return;
     }
 
-    // Calculate expected number of candles between start and end
+    // Calculate expected number of timestamps between start and end
     const expectedCandles = Math.floor((endTimestamp - startTimestamp) / (2 * 60 * 1000)) + 1;
     let notFoundTimestamps = 0;
 
     for (let i = 0; i < expectedCandles; i++) {
       const ts = startTimestamp + i * (2 * 60 * 1000);
-      if (!candlesSet.has(ts)) {
+      if (!timestampsSet.has(ts)) {
         notFoundTimestamps++;
       }
     }
 
     if (notFoundTimestamps > 0) {
-      console.log(`Found ${notFoundTimestamps} missing candles`);
+      console.warn(`Found ${notFoundTimestamps} missing timestamps`);
       return;
     }
 
+    const timeStampOf12hoursBeforeCandle =
+      Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
+
+    timeStampOf12hoursBeforeCandle === startTimestamp
+      ? console.log("Covered; Last 12 hours candles all covered")
+      : console.warn(
+          `Not-covered; Last 12 hours candles are not covered. Missings are ${30 * 12 - numberOfCandles} candles.`,
+        );
     console.log(`12 hours DB Candles timestamps: ${numberOfCandles}`);
     console.log(`Start Candle Time: ${new Date(startTimestamp).toString()}`);
     console.log(`End Candle Time: ${new Date(endTimestamp).toString()}`);
     console.log("All the Candles are valid.");
     console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
     console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
-    console.log(`-------------------------------END-------------------------------`);
+    console.log(`------------------------------------END------------------------------------`);
     console.log("\n\n");
   }
 

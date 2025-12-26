@@ -2,18 +2,14 @@ const PairModel = require("./Pair.model");
 const Candle2m = require("./Candle.model");
 
 class DbOperations {
-  async getSavedCandlesLast12Hours(pair, mostLast12hoursBeforeTimestamp) {
-    console.log("Input params:", { pair, fromCandle: new Date(mostLast12hoursBeforeTimestamp).toISOString() });
-
+  async getDBTimestampsLast12Hours(pair, timeStampOf12hoursBeforeCandle) {
     const candles = await Candle2m.find({
       pair: pair,
-      timestamp: { $gte: mostLast12hoursBeforeTimestamp },
+      timestamp: { $gte: timeStampOf12hoursBeforeCandle },
     })
       .select("timestamp")
       .sort({ timestamp: 1 })
       .lean();
-
-    console.log("Filtered candles count:", candles.length);
 
     return candles.map((c) => c.timestamp);
   }
@@ -47,11 +43,6 @@ class DbOperations {
       timestamp: candle[0],
     }));
 
-    console.log(
-      `${new Date(candlesToInsert[0].timestamp).toISOString()} - ${new Date(
-        candlesToInsert[candlesToInsert.length - 1].timestamp,
-      ).toISOString()}`,
-    );
     try {
       const result = await Candle2m.insertMany(candlesToInsert, {
         ordered: false,

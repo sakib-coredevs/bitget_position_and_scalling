@@ -4,21 +4,21 @@ const nowCandleTimestamp = require("./utils/nowCandleTimestamp");
 
 class CandleBackfill {
   async backfillMissingCandles(symbol) {
-    const mostLast12hoursBeforeTimestamp =
+    const timeStampOf12hoursBeforeCandle =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
-    const savedTimeStamps = await dbOperations.getSavedCandlesLast12Hours(symbol, mostLast12hoursBeforeTimestamp);
+    const savedTimeStamps = await dbOperations.getDBTimestampsLast12Hours(symbol, timeStampOf12hoursBeforeCandle);
 
-    this.printTimestamp(`Fetched db timestams for ${symbol}`, savedTimeStamps);
-
-    console.log(savedTimeStamps);
+    this.printTimestamp(`Fetched db timestamps for ${symbol}`, savedTimeStamps);
 
     const missingTimestamps = this.identifyMissingTimestamps(savedTimeStamps);
     const leastTimestamp = Math.min(...missingTimestamps);
     const maxTimestamp = Math.max(...missingTimestamps);
 
-    const candles = await this.get2mCandles(symbol, leastTimestamp, maxTimestamp);
+    if (missingTimestamps.length === 0) return;
 
-    console.log(`Fetched ${candles.length} candles from Bitget for backfilling for ${symbol}`);
+    const candles = await this.getBitget2mCandles(symbol, leastTimestamp, maxTimestamp);
+
+    console.log(`Fetched ${candles.length} 2m candles from Bitget, backfilling for ${symbol}`);
     // console.log(`Fetched Candles: ${candles.map((candle) => candle.timestamp).join(", ")}`);
 
     const missingTimeStampsSet = new Set(missingTimestamps);
@@ -27,35 +27,42 @@ class CandleBackfill {
     });
 
     // console.log(`Filtered Candles for Insertion: ${missingCandles.map((candle) => candle[0]).join(", ")}`);
-    console.log(`Filtered ${missingCandles.length} candles for DB insertion for ${symbol}`);
+    console.log(`Filtered ${missingCandles.length} candles to DB insertion for ${symbol}`);
 
-    await dbOperations.insertMissingCandles(symbol, missingCandles);
-    console.log(`Saved missing candles for ${symbol}`);
+    const result = await dbOperations.insertMissingCandles(symbol, missingCandles);
+    console.log(`Insertion result : ${JSON.stringify(result)}`);
+
+    if (result.inserted === missingCandles.length) {
+      console.log(`Saved all missing candles for ${symbol}`);
+    } else {
+      const errorMess = `PAIR: ${symbol}: Missing candles are ${missingCandles.length}; Inserted into DB are ${result.inserted}`;
+      //   console.error(errorMess);
+      //   throw new Error(errorMess);
+    }
   }
 
   identifyMissingTimestamps(savedTimeStamps) {
     // Logic to identify missing timestamps
-    const allValidTimestamps = [];
+    const allExpectedTimestamps = [];
 
     const savedTimestampsSet = new Set(savedTimeStamps);
 
     // console.log(`Saved Timestamps: ${[...savedTimestampsSet].join(", ")}`);
 
-    const mostRecentlyClosedCandleTimestamp =
-      Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000;
+    const last2mClosedCandleTimestamp = Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000;
 
     const numberOfCandles = 12 * 30;
 
     for (let i = 0; i < numberOfCandles; i++) {
-      const timestamp = mostRecentlyClosedCandleTimestamp - 2 * 60 * 1000 * i;
-      allValidTimestamps.push(timestamp);
+      const timestamp = last2mClosedCandleTimestamp - 2 * 60 * 1000 * i;
+      allExpectedTimestamps.push(timestamp);
     }
 
-    // console.log(`All Valid Timestamps: ${[...allValidTimestamps].join(", ")}`);
+    // console.log(`All Valid Timestamps: ${[...allExpectedTimestamps].join(", ")}`);
 
     const missingTimestamps = [];
 
-    for (const timestamp of allValidTimestamps) {
+    for (const timestamp of allExpectedTimestamps) {
       if (!savedTimestampsSet.has(timestamp)) {
         missingTimestamps.push(timestamp);
       }
@@ -63,14 +70,17 @@ class CandleBackfill {
 
     // console.log(`Missing Timestamps: ${missingTimestamps.join(", ")}`);
 
-    console.log(`All valid timestamp len: ${allValidTimestamps.length}`);
+    console.log(`All valid timestamp len: ${allExpectedTimestamps.length}`);
     console.log(`Missing timestamp len: ${missingTimestamps.length}`);
     console.log(`Saved timestamp len: ${savedTimestampsSet.size}`);
 
     return missingTimestamps;
   }
 
-  async get2mCandles(symbol, startTimestamp, endTimestamp) {
+  async getBitget2mCandles(symbol, startTimestamp, endTimestamp) {
+    console.log(`Expected 2m startcandle ${new Date(startTimestamp).toString()}`);
+    console.log(`Expected 2m endcandle ${new Date(endTimestamp).toString()}`);
+
     const start = startTimestamp - 60 * 1000;
     const end = endTimestamp + 60 * 1000;
 
@@ -78,7 +88,22 @@ class CandleBackfill {
 
     console.log(`Fetched ${candles1min.length} 1-min candles from Bitget.`);
 
+    console.log(`Bitget 1m startcandle ${new Date(parseFloat(candles1min[0][0])).toString()}`);
+    console.log(`Bitget 1m endcandle ${new Date(parseFloat(candles1min[candles1min.length - 1][0])).toString()}`);
+
     const candles2min = this.convertInto2mCandles(candles1min);
+
+    // verify
+
+    if (candles2min[0][0] !== startTimestamp) {
+      console.log("start timestamp not matched after conversion");
+      throw new Error("start timestamp not matched after conversion");
+    }
+    if (candles2min[candles2min.length - 1][0] !== endTimestamp) {
+      console.log("end timestamp not matched after conversion");
+      throw new Error("end timestamp not matched after conversion");
+    }
+
     return candles2min;
   }
 
