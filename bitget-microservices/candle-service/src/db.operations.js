@@ -1,3 +1,4 @@
+const PairModel = require("./Pair.model");
 const Candle2m = require("./Candle.model");
 
 class DbOperations {
@@ -19,7 +20,7 @@ class DbOperations {
 
   async insertMissingCandles(pair, missingCandles) {
     // missingCandles array format:
-    // [{ timestamp, open, close, high, low, volume }, ...]
+    // [ [ timestamp, open, max price, min price, close, volume ], ...]
 
     if (!missingCandles || missingCandles.length === 0) {
       return { inserted: 0, errors: [] };
@@ -28,12 +29,12 @@ class DbOperations {
     // Add pair to each candle
     const candlesToInsert = missingCandles.map((candle) => ({
       pair: pair,
-      open: candle.open,
-      close: candle.close,
-      high: candle.high,
-      low: candle.low,
-      volume: candle.volume,
-      timestamp: candle.timestamp,
+      open: candle[1],
+      close: candle[4],
+      high: candle[2],
+      low: candle[3],
+      volume: candle[5],
+      timestamp: candle[0],
     }));
 
     try {
@@ -47,7 +48,6 @@ class DbOperations {
         errors: [],
       };
     } catch (error) {
-      // Jodi duplicate key error ashe (E11000)
       if (error.code === 11000 && error.writeErrors) {
         const inserted = candlesToInsert.length - error.writeErrors.length;
         return {
@@ -60,6 +60,16 @@ class DbOperations {
       }
       throw error;
     }
+  }
+
+  async getCandleListeningPairs() {
+    const pairsToListen = await PairModel.find(
+      {
+        volume24h: { $gte: 30_000_000 }, // 30M
+      },
+      { exchange: 1, symbol: 1, volume24h: 1 },
+    );
+    return pairsToListen.map((p) => p.symbol);
   }
 }
 

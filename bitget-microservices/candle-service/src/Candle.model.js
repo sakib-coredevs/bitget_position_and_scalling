@@ -1,4 +1,4 @@
-const { Schema } = require("mongoose");
+const { Schema, model } = require("mongoose");
 
 const candle2mSchema = new Schema({
   pair: { type: String, required: true },
@@ -15,4 +15,4 @@ candle2mSchema.index({ timestamp: 1 });
 candle2mSchema.index({ pair: 1 });
 candle2mSchema.index({ pair: 1, timestamp: -1 });
 
-module.exports = mongoose.model("Candle2m", candle2mSchema);
+module.exports = model("Candle2m", candle2mSchema);

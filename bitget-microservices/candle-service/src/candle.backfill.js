@@ -2,11 +2,12 @@ const bitgetClient = require("./bitget.client");
 const dbOperations = require("./db.operations");
 const nowCandleTimestamp = require("./utils/nowCandleTimestamp");
 
-class CandleBackfillService {
+class CandleBackfill {
   async backfillMissingCandles(symbol) {
     const mostLast12hoursBeforeTimestamp =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
     const savedTimeStamps = await dbOperations.getSavedCandlesLast12Hours(symbol, mostLast12hoursBeforeTimestamp);
+    this.printTimestamp(`Fetched db timestams for ${symbol}`, savedTimeStamps);
 
     const missingTimestamps = this.identifyMissingTimestamps(savedTimeStamps);
     const leastTimestamp = Math.min(...missingTimestamps);
@@ -14,19 +15,19 @@ class CandleBackfillService {
 
     const candles = await this.get2mCandles(symbol, leastTimestamp, maxTimestamp);
 
-    const converted2mCandles = this.convertInto2mCandles(candles);
+    console.log(`Fetched ${candles.length} candles from Bitget for backfilling for ${symbol}`);
+    // console.log(`Fetched Candles: ${candles.map((candle) => candle.timestamp).join(", ")}`);
 
-    console.log(`Fetched ${candles.length} candles from Bitget for backfilling.`);
-    console.log(`Fetched Candles: ${candles.map((candle) => candle.timestamp).join(", ")}`);
-
-    const missingCandleSet = new Set(missingTimestamps);
-    const filteredCandles = candles.filter((candle) => {
-      return missingCandleSet.has(candle.timestamp);
+    const missingTimeStampsSet = new Set(missingTimestamps);
+    const missingCandles = candles.filter((candle) => {
+      return missingTimeStampsSet.has(candle[0]);
     });
 
-    console.log(`Filtered Candles for Insertion: ${filteredCandles.map((candle) => candle.timestamp).join(", ")}`);
+    // console.log(`Filtered Candles for Insertion: ${missingCandles.map((candle) => candle[0]).join(", ")}`);
+    console.log(`Filtered ${missingCandles.length} candles for DB insertion for ${symbol}`);
 
-    // await dbOperations.insertMissingCandles(symbol, filteredCandles);
+    await dbOperations.insertMissingCandles(symbol, missingCandles);
+    console.log(`Saved missing candles for ${symbol}`);
   }
 
   identifyMissingTimestamps(savedTimeStamps) {
@@ -35,7 +36,7 @@ class CandleBackfillService {
 
     const savedTimestampsSet = new Set(savedTimeStamps);
 
-    console.log(`Saved Timestamps: ${[...savedTimestampsSet].join(", ")}`);
+    // console.log(`Saved Timestamps: ${[...savedTimestampsSet].join(", ")}`);
 
     const mostRecentlyClosedCandleTimestamp =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000;
@@ -47,7 +48,7 @@ class CandleBackfillService {
       allValidTimestamps.push(timestamp);
     }
 
-    console.log(`All Valid Timestamps: ${[...allValidTimestamps].join(", ")}`);
+    // console.log(`All Valid Timestamps: ${[...allValidTimestamps].join(", ")}`);
 
     const missingTimestamps = [];
 
@@ -57,7 +58,7 @@ class CandleBackfillService {
       }
     }
 
-    console.log(`Missing Timestamps: ${missingTimestamps.join(", ")}`);
+    // console.log(`Missing Timestamps: ${missingTimestamps.join(", ")}`);
 
     console.log(`All valid timestamp len: ${allValidTimestamps.length}`);
     console.log(`Missing timestamp len: ${missingTimestamps.length}`);
@@ -71,6 +72,8 @@ class CandleBackfillService {
     const end = endTimestamp + 60 * 1000;
 
     const candles1min = await bitgetClient.getCandles(symbol, start, end);
+
+    console.log(`Fetched ${candles1min.length} 1-min candles from Bitget.`);
 
     const candles2min = this.convertInto2mCandles(candles1min);
     return candles2min;
@@ -88,11 +91,20 @@ class CandleBackfillService {
           Math.max(parseFloat(candle1[2]), parseFloat(candle2[2])), // max price
           Math.min(parseFloat(candle1[3]), parseFloat(candle2[3])), // min price
           parseFloat(candle2[4]), // latest price
+          parseFloat(candle1[6]) + parseFloat(candle2[6]), // quote volume
         ];
         converted.push(merged);
       }
     }
     return converted;
   }
+
+  printTimestamp(timestampfor, timestamps) {
+    const len = timestamps.length;
+    const firstTimestamp = timestamps[0] ? new Date(timestampfor[0]).toISOString() : "NULL";
+    const lastTimestamp = timestamps[len - 1] ? new Date(timestampfor[len - 1]).toISOString() : "NULL";
+    console.log(timestampfor);
+    console.log(`Total ${len} timestams; ${firstTimestamp} - ${lastTimestamp}`);
+  }
 }
-module.exports = new CandleBackfillService();
+module.exports = new CandleBackfill();
