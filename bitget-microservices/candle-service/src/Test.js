@@ -2,7 +2,8 @@ const dbOperations = require("./db.operations");
 
 class Test {
   async testCandles() {
-    const pairs = await this.getCandleListeningPairs();
+    // const pairs = await this.getCandleListeningPairs();
+    const pairs = ["SOLUSDT"];
     for (const pair of pairs) {
       await this.evaluateCandlesIntegrity(pair);
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -30,18 +31,20 @@ class Test {
     const endTimestamp = Math.max(...timestamps);
     const timestampsSet = new Set(timestamps);
 
-    const isValidStartTimestamp = (startTimestamp / (60 * 1000 * 2)) % 2 !== 0;
-    const isValidEndTimestamp = (endTimestamp / (60 * 1000 * 2)) % 2 !== 0;
+    const isValidStartTimestamp = (startTimestamp / (60 * 1000)) % 2 === 0;
+    const isValidEndTimestamp = (endTimestamp / (60 * 1000)) % 2 === 0;
 
     console.log(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours candle's) -----------`);
 
     if (!isValidStartTimestamp) {
       console.warn(`startTimestamp (${new Date(startTimestamp).toString()}) is not valid (odd minute)`);
+      console.log(startTimestamp);
       return;
     }
 
     if (!isValidEndTimestamp) {
       console.warn(`endTimestamp (${new Date(endTimestamp).toString()}) is not valid (odd minute)`);
+      console.log(endTimestamp);
       return;
     }
 
@@ -54,7 +57,7 @@ class Test {
 
     let oddTimestamps = 0;
     for (const ts of timestampsSet) {
-      if ((ts / (2 * 60 * 1000)) % 2 !== 0) oddTimestamps++;
+      if ((ts / (60 * 1000)) % 2 === 1) oddTimestamps++;
     }
 
     if (oddTimestamps > 0) {
@@ -80,19 +83,23 @@ class Test {
 
     const timeStampOf12hoursBeforeCandle =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
+    const timeStampOfLastClosed = Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000;
+    const isAll12hCovered = timeStampOf12hoursBeforeCandle === startTimestamp && timeStampOfLastClosed === endTimestamp;
 
-    timeStampOf12hoursBeforeCandle === startTimestamp
-      ? console.log("Covered; Last 12 hours candles all covered")
-      : console.warn(
-          `Not-covered; Last 12 hours candles are not covered. Missings are ${30 * 12 - numberOfCandles} candles.`,
-        );
-    console.log(`12 hours DB Candles timestamps: ${numberOfCandles}`);
-    console.log(`Start Candle Time: ${new Date(startTimestamp).toString()}`);
-    console.log(`End Candle Time: ${new Date(endTimestamp).toString()}`);
-    console.log("All the Candles are valid.");
-    console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
-    console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
-    console.log(`------------------------------------END------------------------------------`);
+    if (!isAll12hCovered) {
+      console.warn(
+        `Not-covered; Last 12 hours candles are not covered. Missings are ${30 * 12 - numberOfCandles} candles.`,
+      );
+      return;
+    }
+
+    // console.log(`12 hours DB Candles timestamps: ${numberOfCandles}`);
+    // console.log(`Start Candle Time: ${new Date(startTimestamp).toString()}`);
+    // console.log(`End Candle Time: ${new Date(endTimestamp).toString()}`);
+    // console.log("All the Candles are valid.");
+    // console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
+    // console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
+    console.log(`------------------------------------OK------------------------------------`);
     console.log("\n\n");
   }
 

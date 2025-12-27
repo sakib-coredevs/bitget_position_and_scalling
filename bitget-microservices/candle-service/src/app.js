@@ -8,9 +8,9 @@ const Test = require("./Test");
 (async () => {
   await connectDB();
   logger.info("Started successfully");
-  await candleBackfill.backfillMissingCandles("BTCUSDT");
+  await candleBackfill.backfillMissingCandles("SOLUSDT");
 
   setInterval(async () => {
     await Test.testCandles();
-  }, 20_000);
+  }, 5_000);
 })();
