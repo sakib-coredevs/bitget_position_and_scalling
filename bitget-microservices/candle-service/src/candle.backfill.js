@@ -29,7 +29,7 @@ class CandleBackfill {
     // console.log(`Filtered Candles for Insertion: ${missingCandles.map((candle) => candle[0]).join(", ")}`);
     console.log(`Filtered ${missingCandles.length} candles to DB insertion for ${symbol}`);
 
-    const result = await dbOperations.insertMissingCandles(symbol, missingCandles);
+    const result = await dbOperations.insertCandles(symbol, missingCandles);
     console.log(`Insertion result : ${JSON.stringify(result)}`);
 
     if (result.inserted === missingCandles.length) {
@@ -119,7 +119,7 @@ class CandleBackfill {
           Math.max(parseFloat(candle1[2]), parseFloat(candle2[2])), // max price
           Math.min(parseFloat(candle1[3]), parseFloat(candle2[3])), // min price
           parseFloat(candle2[4]), // latest price
-          parseFloat(candle1[6]) + parseFloat(candle2[6]), // quote volume
+          parseFloat(candle1[5]) + parseFloat(candle2[5]), // quote volume
         ];
         converted.push(merged);
       }

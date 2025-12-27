@@ -1,6 +1,6 @@
-import WebSocket from "ws";
-import EventEmitter from "events";
-import ReconciliationLayer from "./reconciliationLayer.js";
+const WebSocket = require("ws");
+const EventEmitter = require("events");
+const Accumulator = require("./accumulator");
 
 class CandleStickWsClient extends EventEmitter {
   constructor(config) {
@@ -23,7 +23,7 @@ class CandleStickWsClient extends EventEmitter {
     this.pingTimer = null;
     this.msgTimestamps = [];
     this.subscriptions = new Set(); // store (symbol, interval)
-    this.reconciliationObjs = new Map();
+    this.accumulator = new Accumulator();
   }
 
   async connect() {
@@ -83,8 +83,6 @@ class CandleStickWsClient extends EventEmitter {
       this.emit("connection");
       this.lastPong = Date.now();
 
-      console.log("\nResubscribing to previous subscriptions...\n");
-
       this._resubscribeToAll();
 
       //   setTimeout(() => {
@@ -106,10 +104,12 @@ class CandleStickWsClient extends EventEmitter {
         }
 
         const msg = JSON.parse(messageStr);
-        if (msg.action === "update" || msg.action === "snapshot") {
-          const symbol = msg.arg.instId;
-          const reconciliationLayer = this._getReconciliationLayer(symbol);
-          reconciliationLayer.handleCandleData?.(msg);
+        if (msg.action === "update") {
+          const {
+            data,
+            arg: { instId: symbol },
+          } = msg;
+          this.accumulator.handleUpdate(symbol, data);
         }
       } catch (err) {
         console.error("Message parse error:", err);
@@ -154,7 +154,6 @@ class CandleStickWsClient extends EventEmitter {
 
   async subscribe(symbol, interval) {
     // this method set reconnectionLayer for the given symbol if already not set
-    this._setReconciliationLayer(symbol, interval);
     const subMsg = {
       op: "subscribe",
       args: [
@@ -169,6 +168,7 @@ class CandleStickWsClient extends EventEmitter {
     const jsonMess = JSON.stringify(subMsg);
     await this._rateLimitedSend(jsonMess);
     this._addAsubscription(symbol, interval);
+    this.accumulator.registerPair(symbol);
   }
 
   async unsubscribe(symbol, interval) {
@@ -185,6 +185,7 @@ class CandleStickWsClient extends EventEmitter {
     const jsonMess = JSON.stringify(unsubMsg);
     await this._rateLimitedSend(jsonMess);
     this._removeAsubscription(symbol, interval);
+    this.accumulator.unregisterPair(symbol);
   }
 
   async _rateLimitedSend(message) {
@@ -276,21 +277,6 @@ class CandleStickWsClient extends EventEmitter {
       await new Promise((r) => setTimeout(r, 100));
     }
   }
-
-  _setReconciliationLayer(symbol, interval) {
-    const alreadyHas = this.reconciliationObjs.get(symbol);
-    if (alreadyHas) return;
-    const reconciliationLayer = new ReconciliationLayer({ symbol, interval });
-    this.reconciliationObjs.set(symbol, reconciliationLayer);
-  }
-
-  _getReconciliationLayer(symbol) {
-    return this.reconciliationObjs.get(symbol);
-  }
-
-  _deleteReconciliationLayer(symbol) {
-    this.reconciliationObjs.delete(symbol);
-  }
 }
 
-export default CandleStickWsClient;
+module.exports = CandleStickWsClient;

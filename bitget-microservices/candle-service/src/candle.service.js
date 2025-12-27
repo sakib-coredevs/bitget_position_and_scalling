@@ -2,9 +2,10 @@ const candleBackfill = require("./candle.backfill");
 const dbOperations = require("./db.operations");
 
 class CandleService {
-  constructor() {
+  constructor(candlemangr) {
     this.candleListeningPairsSet = new Set();
     this.erroredPairsOnTurningOn = [];
+    this.candlemangr = candlemangr;
   }
 
   //   async setCandleListeningPairsInitially() {
@@ -20,10 +21,10 @@ class CandleService {
       const newPairs = this.getNewCandleListeningPairs(pairs);
       const stoppedPairs = this.getStoppedCandleListeningPairs(pairs);
 
-      console.log("Evaluating candle listening pairs...");
-      console.log(`Current candle listening pairs: ${[...this.candleListeningPairsSet].join(", ")}`);
-      console.log(`New candle listening pairs: ${newPairs.join(", ")}`);
-      console.log(`Stopped candle listening pairs: ${stoppedPairs.join(", ")}`);
+      //   console.log("Evaluating candle listening pairs...");
+      //   console.log(`Current candle listening pairs: ${[...this.candleListeningPairsSet].join(", ")}`);
+      //   console.log(`New candle listening pairs: ${newPairs.join(", ")}`);
+      //   console.log(`Stopped candle listening pairs: ${stoppedPairs.join(", ")}`);
 
       for (const pair of newPairs) {
         this.addCandleListeningPair(pair);
@@ -57,6 +58,8 @@ class CandleService {
           async () => {
             try {
               await candleBackfill.backfillMissingCandles(pair);
+              await new Promise((res) => setTimeout(res, 2000));
+              await this.candlemangr.subscribe(pair);
               console.log(`Turning on ${pair} has completed!`);
             } catch (err) {
               console.log(`Turning on ${pair} not completed!`);
@@ -128,4 +131,4 @@ class CandleService {
   }
 }
 
-module.exports = new CandleService();
+module.exports = CandleService;

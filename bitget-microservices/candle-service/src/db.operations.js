@@ -24,16 +24,16 @@ class DbOperations {
     return candles;
   }
 
-  async insertMissingCandles(pair, missingCandles) {
-    // missingCandles array format:
+  async insertCandles(pair, candles) {
+    // candles array format:
     // [ [ timestamp, open, max price, min price, close, volume ], ...]
 
-    if (!missingCandles || missingCandles.length === 0) {
+    if (!candles || candles.length === 0) {
       return { inserted: 0, errors: [] };
     }
 
     // Add pair to each candle
-    const candlesToInsert = missingCandles.map((candle) => ({
+    const candlesToInsert = candles.map((candle) => ({
       pair: pair,
       open: candle[1],
       close: candle[4],
