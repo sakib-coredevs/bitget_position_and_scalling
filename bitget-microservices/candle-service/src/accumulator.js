@@ -100,6 +100,10 @@ class Accumulator {
         const currentCandles = [...this.bulkUpdateCandles.values()];
         const missedCandlePairs = [];
 
+        setTimeout(() => {
+          this.bulkUpdateCandles.clear();
+        }, 20_000);
+
         for (const actvPair of activatedPairs) {
           if (!bulkUpdatePairs.includes(actvPair)) {
             missedCandlePairs.push(actvPair);
