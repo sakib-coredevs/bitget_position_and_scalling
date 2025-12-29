@@ -25,6 +25,7 @@ class Accumulator {
     //   process.exit();
     // }
     // [c1, c2]
+    if (pair === "SOLUSDT") return;
     if (data.length === 2) {
       const { candle1, candle2 } = this._get2candleFromArray(data);
       const candles = this.pairs.get(pair);
@@ -110,8 +111,9 @@ class Accumulator {
         this.isInsertTimerScheduled = false;
 
         if (missedCandlePairs.length > 0) {
-          logger.warn(`candle-stick missed. Pairs - ${missedCandlePairs.join(", ")}`);
+          logger.warn(`Candle-stick missed. Pairs - ${missedCandlePairs.join(", ")}`);
           const candles = await this._fetchAndFillCandleNow(missedCandlePairs);
+          await new Promise((res) => setTimeout(res, 100));
           for (const candle of candles) {
             currentCandles.push(candle);
           }

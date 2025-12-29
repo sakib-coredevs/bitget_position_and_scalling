@@ -34,7 +34,7 @@ class CandleBackfill {
     // console.log(`Insertion result : ${JSON.stringify(result)}`);
 
     if (result.inserted === missingCandles.length) {
-      logger.info(`Saved all 12h previous candles for the ${symbol}, before start for listening`);
+      logger.info(`Saved all 12h previous candles for the ${symbol}`);
     } else {
       const errorMess = `PAIR: ${symbol}: Missing candles are ${missingCandles.length}; Inserted into DB are ${result.inserted}`;
       //   logger.error(errorMess);

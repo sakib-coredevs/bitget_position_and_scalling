@@ -4,9 +4,16 @@ const dbOperations = require("./db.operations");
 class CandleIntegrity {
   async testCandles() {
     const pairs = await this.getCandleListeningPairs();
+    let issuesCnt = 0;
     for (const pair of pairs) {
-      await this.evaluateCandlesIntegrity(pair);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const hasIssue = await this.evaluateCandlesIntegrity(pair);
+      if (hasIssue) {
+        issuesCnt++;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    if (issuesCnt === 0) {
+      logger.info(`TEST-REPORT: All the ${pairs.length} listening-pair's last-12 hours candle-data -- Okk.`);
     }
   }
 
@@ -22,7 +29,7 @@ class CandleIntegrity {
     //   timestamps.map((c) => c.timestamp),
     // );
 
-    this.checkIntegrity(timestamps, pair);
+    return this.checkIntegrity(timestamps, pair);
   }
 
   checkIntegrity(timestamps, pair) {
@@ -34,25 +41,25 @@ class CandleIntegrity {
     const isValidStartTimestamp = (startTimestamp / (60 * 1000)) % 2 === 0;
     const isValidEndTimestamp = (endTimestamp / (60 * 1000)) % 2 === 0;
 
-    logger.info(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours candle's) -----------`);
+    // logger.info(`----------- ${pair}: CANDLE STICK REPORT (last 12 hours candle's) -----------`);
 
     if (!isValidStartTimestamp) {
-      logger.error(`startTimestamp (${new Date(startTimestamp).toString()}) is not valid (odd minute)`);
+      logger.error(`${pair}: startTimestamp (${new Date(startTimestamp).toString()}) is not valid (odd minute)`);
       logger.info(startTimestamp);
-      return;
+      return true;
     }
 
     if (!isValidEndTimestamp) {
-      logger.error(`endTimestamp (${new Date(endTimestamp).toString()}) is not valid (odd minute)`);
+      logger.error(`${pair}, endTimestamp (${new Date(endTimestamp).toString()}) is not valid (odd minute)`);
       logger.info(endTimestamp);
-      return;
+      return true;
     }
 
     let duplicateTimestamps = timestamps.length - timestampsSet.size;
 
     if (duplicateTimestamps > 0) {
-      logger.error(`Number of duplicate timestamps: ${duplicateTimestamps}`);
-      return;
+      logger.error(`${pair}, number of duplicate timestamps: ${duplicateTimestamps}`);
+      return true;
     }
 
     let oddTimestamps = 0;
@@ -61,8 +68,8 @@ class CandleIntegrity {
     }
 
     if (oddTimestamps > 0) {
-      logger.error(`Invalid: ${oddTimestamps} odd timestamps found`);
-      return;
+      logger.error(`${pair}, invalid ${oddTimestamps} odd timestamps found`);
+      return true;
     }
 
     // Calculate expected number of timestamps between start and end
@@ -77,8 +84,8 @@ class CandleIntegrity {
     }
 
     if (notFoundTimestamps > 0) {
-      logger.error(`Found ${notFoundTimestamps} missing timestamps`);
-      return;
+      logger.error(`${pair}, found ${notFoundTimestamps} missing timestamps`);
+      return true;
     }
 
     const timeStampOf12hoursBeforeCandle =
@@ -88,9 +95,9 @@ class CandleIntegrity {
 
     if (!isAll12hCovered) {
       logger.error(
-        `Not-covered; Last 12 hours candles are not covered. Missings are ${30 * 12 - numberOfCandles} candles.`,
+        `${pair}, last 12 hours candles are not covered. Missings are ${30 * 12 - numberOfCandles} candles.`,
       );
-      return;
+      return true;
     }
 
     // console.log(`12 hours DB Candles timestamps: ${numberOfCandles}`);
@@ -99,7 +106,8 @@ class CandleIntegrity {
     // console.log("All the Candles are valid.");
     // console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
     // console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
-    logger.info(`------------------------------------OK------------------------------------`);
+    // logger.info(`------------------------------------OK------------------------------------`);
+    return false;
   }
 
   async getCandleListeningPairs() {

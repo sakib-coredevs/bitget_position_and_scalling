@@ -8,7 +8,7 @@ class CandleStickClientManager extends EventEmitter {
     this.url = "wss://ws.bitget.com/v2/ws/public";
     this.instType = "USDT-FUTURES";
     this.totalCoinsSubscribed = 0;
-    this.maxCoinsPerListner = 5;
+    this.maxCoinsPerListner = 20;
     this.listeners = []; //{ listener, subscriptions }
     this.defaultInverval = "1m";
     this.subscriptions = new Set();

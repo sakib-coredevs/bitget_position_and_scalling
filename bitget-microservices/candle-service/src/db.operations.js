@@ -1,7 +1,5 @@
 const PairModel = require("./Pair.model");
 const Candle2m = require("./Candle.model");
-const logger = require("../logger");
-
 class DbOperations {
   async getDBTimestampsLast12Hours(pair, timeStampOf12hoursBeforeCandle) {
     const candles = await Candle2m.find({
@@ -43,11 +41,6 @@ class DbOperations {
       volume: candle[5],
       timestamp: candle[0],
     }));
-
-    logger.warn("in dbops: ");
-    for (const c of candlesToInsert) {
-      logger.warn(JSON.stringify(c));
-    }
 
     try {
       const result = await Candle2m.insertMany(candlesToInsert, {
