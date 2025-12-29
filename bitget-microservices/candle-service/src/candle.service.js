@@ -44,14 +44,14 @@ class CandleService {
   }
 
   turnOnCandleListening(pairs) {
-    const chunkArray = this.getChunkArray(pairs, 40);
+    const chunkArray = this.getChunkArray(pairs, 30);
     let j = 0;
     for (const pairChunk of chunkArray) {
       let i = 0;
       const nextJth2mCandleTimestamp =
         Math.floor(Date.now() / (2 * 60 * 1000)) * 2 * 60 * 1000 + 2 * 60 * 1000 * (j + 1);
       for (const pair of pairChunk) {
-        const callBackDelay = nextJth2mCandleTimestamp - Date.now() + i * 1000;
+        const callBackDelay = nextJth2mCandleTimestamp - Date.now() + i * 1500;
         // console.log(`Turning on candle listening for ${pair} after ${callBackDelay / 1000}s`);
 
         setTimeout(

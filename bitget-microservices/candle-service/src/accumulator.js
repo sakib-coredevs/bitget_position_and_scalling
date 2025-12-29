@@ -117,10 +117,7 @@ class Accumulator {
           for (const candle of candles) {
             currentCandles.push(candle);
           }
-        }
-        logger.warn(new Date(currentCandles[0].startTime).toISOString());
-        for (const c of currentCandles) {
-          logger.warn(JSON.stringify(c));
+          logger.info(`Reconciled missed canldes. Pairs - ${missedCandlePairs.join(", ")}`);
         }
         await this._saveToDB(currentCandles);
       }, 1500);
