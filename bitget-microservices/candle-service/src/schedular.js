@@ -1,3 +1,5 @@
+const logger = require("../logger");
+
 const Interval = 20_000;
 
 const schedular = (candleService) => {
@@ -5,7 +7,7 @@ const schedular = (candleService) => {
     try {
       await candleService.evaluateCandleListeningPairs();
     } catch {
-      console.log("Error in evaluating candle listening pairs.");
+      logger.error("Error in evaluating candle listening pairs.");
     }
   }, Interval);
 };

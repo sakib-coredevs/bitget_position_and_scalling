@@ -23,6 +23,6 @@ const schedular = require("./schedular");
     }, 40_000);
   } catch (err) {
     logger.error("Can't start the candle-service");
-    console.log(err);
+    logger.error(err);
   }
 })();

@@ -1,6 +1,6 @@
 const candleBackfill = require("./candle.backfill");
 const dbOperations = require("./db.operations");
-
+const logger = require("../logger");
 class CandleService {
   constructor(candlemangr) {
     this.candleListeningPairsSet = new Set();
@@ -38,21 +38,21 @@ class CandleService {
 
       this.turnOffCandleListening(stoppedPairs);
     } catch (error) {
-      console.error("Error evaluating candle listening pairs");
-      console.log(error);
+      logger.error("Error evaluating candle listening pairs");
+      logger.error(error);
     }
   }
 
   turnOnCandleListening(pairs) {
-    const chunkArray = this.getChunkArray(pairs, 5);
+    const chunkArray = this.getChunkArray(pairs, 30);
     let j = 0;
     for (const pairChunk of chunkArray) {
       let i = 0;
       const nextJth2mCandleTimestamp =
         Math.floor(Date.now() / (2 * 60 * 1000)) * 2 * 60 * 1000 + 2 * 60 * 1000 * (j + 1);
       for (const pair of pairChunk) {
-        const callBackDelay = nextJth2mCandleTimestamp - Date.now() + i * 10_000;
-        console.log(`Turning on candle listening for ${pair} after ${callBackDelay / 1000}s`);
+        const callBackDelay = nextJth2mCandleTimestamp - Date.now() + i * 2_000;
+        // console.log(`Turning on candle listening for ${pair} after ${callBackDelay / 1000}s`);
 
         setTimeout(
           async () => {
@@ -60,10 +60,10 @@ class CandleService {
               await candleBackfill.backfillMissingCandles(pair);
               await new Promise((res) => setTimeout(res, 2000));
               await this.candlemangr.subscribe(pair);
-              console.log(`Turning on ${pair} has completed!`);
+              logger.info(`Turning on ${pair} has completed!`);
             } catch (err) {
-              console.log(`Turning on ${pair} not completed!`);
-              console.log(err);
+              logger.error(`Turning on ${pair} not completed!`);
+              logger.error(err);
               if (!this.erroredPairsOnTurningOn.includes(pair)) {
                 this.erroredPairsOnTurningOn.push(pair);
                 setTimeout(() => this.turnOnCandleListening([pair]), 5_000);
@@ -79,9 +79,18 @@ class CandleService {
     }
   }
 
-  turnOffCandleListening(pairs) {
+  async turnOffCandleListening(pairs) {
+    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
     for (const pair of pairs) {
-      // Logic to turn off candle listening for the pair
+      try {
+        await this.candlemangr.unsubscribe(pair);
+        logger.info(`Successfully unsubscribed ${pair} from candle listening`);
+      } catch (err) {
+        logger.info(`Unsubscribing ${pair} from candle listening not completed\nError:`, err);
+      }
+
+      await delay(5_000);
     }
   }
 

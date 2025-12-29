@@ -11,7 +11,7 @@ class CandleIntegrity {
   }
 
   async evaluateCandlesIntegrity(pair) {
-    console.log("\n\n\n\n");
+    // console.log("\n\n\n\n");
 
     const timeStampOf12hoursBeforeCandle =
       Math.floor(Date.now() / (2 * 60 * 1000)) * (2 * 60 * 1000) - 2 * 60 * 1000 * 30 * 12;
@@ -100,7 +100,6 @@ class CandleIntegrity {
     // console.log(`Number of Duplicate timestamps: ${duplicateTimestamps}`);
     // console.log(`Number of not found Candles timestamps: ${notFoundTimestamps}`);
     logger.info(`------------------------------------OK------------------------------------`);
-    logger.info("\n\n");
   }
 
   async getCandleListeningPairs() {

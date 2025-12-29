@@ -1,3 +1,4 @@
+const logger = require("../logger.js");
 const CandleStickWsClient = require("./listener.js");
 const EventEmitter = require("events");
 
@@ -15,12 +16,12 @@ class CandleStickClientManager extends EventEmitter {
 
   async start() {
     if (this.listeners.length > 0) {
-      console.log("Manager already started.");
+      logger.warn("Manager already started.");
       return;
     }
     await this._createNewListener();
     // this.report();
-    console.log("CandleStickClientManager started.");
+    logger.info("Candle sticks client-manager has started.");
   }
 
   report() {
@@ -35,7 +36,7 @@ class CandleStickClientManager extends EventEmitter {
   async subscribe(symbol, interval = this.defaultInverval) {
     const key = `${symbol}|${interval}`;
     if (this.subscriptions.has(key)) {
-      console.log(`Already subscribed to ${symbol} ${interval}`);
+      logger.warn(`Already subscribed to ${symbol} ${interval}`);
       return;
     }
 
@@ -55,8 +56,7 @@ class CandleStickClientManager extends EventEmitter {
     const listener = this._getListenerBySymbolAndInterval(symbol, interval);
 
     if (!listener) {
-      console.log(`No listener found for ${symbol} with interval ${interval} to unsubscribe.`);
-      return;
+      throw new Error(`No listener found for ${symbol} with interval ${interval} to unsubscribe.`);
     }
 
     await listener.unsubscribe(symbol, interval);

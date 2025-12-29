@@ -1,5 +1,6 @@
 const PairModel = require("./Pair.model");
 const Candle2m = require("./Candle.model");
+const logger = require("../logger");
 
 class DbOperations {
   async getDBTimestampsLast12Hours(pair, timeStampOf12hoursBeforeCandle) {
@@ -24,17 +25,17 @@ class DbOperations {
     return candles;
   }
 
-  async insertCandles(pair, candles) {
-    // candles array format:
+  async insertCandles({ symbol, missingCandles }) {
+    // missingCandles array format:
     // [ [ timestamp, open, max price, min price, close, volume ], ...]
 
-    if (!candles || candles.length === 0) {
+    if (!missingCandles || missingCandles.length === 0) {
       return { inserted: 0, errors: [] };
     }
 
     // Add pair to each candle
-    const candlesToInsert = candles.map((candle) => ({
-      pair: pair,
+    const candlesToInsert = missingCandles.map((candle) => ({
+      pair: symbol ? symbol : candle[6],
       open: candle[1],
       close: candle[4],
       high: candle[2],
@@ -42,6 +43,11 @@ class DbOperations {
       volume: candle[5],
       timestamp: candle[0],
     }));
+
+    logger.warn("in dbops: ");
+    for (const c of candlesToInsert) {
+      logger.warn(JSON.stringify(c));
+    }
 
     try {
       const result = await Candle2m.insertMany(candlesToInsert, {

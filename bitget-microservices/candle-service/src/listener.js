@@ -1,6 +1,7 @@
 const WebSocket = require("ws");
 const EventEmitter = require("events");
 const Accumulator = require("./accumulator");
+const logger = require("../logger");
 
 class CandleStickWsClient extends EventEmitter {
   constructor(config) {
@@ -23,12 +24,12 @@ class CandleStickWsClient extends EventEmitter {
     this.pingTimer = null;
     this.msgTimestamps = [];
     this.subscriptions = new Set(); // store (symbol, interval)
-    this.accumulator = new Accumulator();
+    this.accumulator = Accumulator;
   }
 
   async connect() {
     if (this.running) {
-      console.log("Client already running.");
+      logger.warn("Client already running.");
       return;
     }
 
@@ -39,12 +40,12 @@ class CandleStickWsClient extends EventEmitter {
 
   async disconnect() {
     if (!this.running) {
-      console.log("Client already stopped.");
+      logger.warn("Client already stopped.");
       return;
     }
     this.running = false;
 
-    console.log("Stopping client...");
+    logger.info("Stopping client...");
 
     if (this.pingTimer) {
       clearInterval(this.pingTimer);
@@ -59,11 +60,11 @@ class CandleStickWsClient extends EventEmitter {
     this._closeWebsocket();
 
     this.emit("stopped");
-    console.log("Client stopped cleanly.");
+    logger.info("Client stopped cleanly.");
   }
 
   _makeConnection() {
-    console.log(`Connecting to ${this.url} ...`);
+    logger.info(`Connecting to ${this.url} ...`);
 
     if (this.pingTimer) {
       clearInterval(this.pingTimer);
@@ -78,7 +79,7 @@ class CandleStickWsClient extends EventEmitter {
     this.ws = new WebSocket(this.url);
 
     this.ws.on("open", () => {
-      console.log("Websocket connected.");
+      logger.info("Websocket connected.");
       this.connecting = false;
       this.emit("connection");
       this.lastPong = Date.now();
@@ -112,23 +113,23 @@ class CandleStickWsClient extends EventEmitter {
           this.accumulator.handleUpdate(symbol, data);
         }
       } catch (err) {
-        console.error("Message parse error:", err);
+        logger.error("Message parse error:", err);
       }
     });
 
     this.ws.on("close", () => {
-      console.log("Websocket closed.");
+      logger.warn("Websocket closed.");
       this._closeWebsocketAndScheduleReconnect();
     });
 
     this.ws.on("error", (err) => {
-      console.error("WebSocket error:", err.message);
+      logger.error("WebSocket error:", err.message);
       this._closeWebsocketAndScheduleReconnect();
     });
   }
 
   _scheduleReconnect() {
-    console.log(`Reconnecting in ${this.reconnectDelay / 1000}s...`);
+    logger.info(`Reconnecting in ${this.reconnectDelay / 1000}s...`);
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -147,7 +148,7 @@ class CandleStickWsClient extends EventEmitter {
     // console.log("Ping sent.");
 
     if (Date.now() - this.lastPong > this.pingInterval + this.pongTimeout) {
-      console.log("Pong timeout. Triggering reconnect...");
+      logger.warn("Pong timeout. Triggering reconnect...");
       this._closeWebsocketAndScheduleReconnect();
     }
   }
@@ -196,7 +197,7 @@ class CandleStickWsClient extends EventEmitter {
 
     if (this.msgTimestamps.length >= this.msgLimit) {
       const delay = 1000 - (now - this.msgTimestamps[0]);
-      console.log(`Rate limit hit, delaying ${(delay / 1000).toFixed(2)}s`);
+      logger.warn(`Rate limit hit, delaying ${(delay / 1000).toFixed(2)}s`);
       await new Promise((r) => setTimeout(r, delay));
     }
 
@@ -213,12 +214,12 @@ class CandleStickWsClient extends EventEmitter {
         ws.close?.();
         setTimeout(() => {
           if (ws && ws.readyState !== WebSocket.CLOSED) {
-            console.log("Websocket didn't close gracefully, terminating...");
+            logger.warn("Websocket didn't close gracefully, terminating...");
             ws.terminate?.();
           }
         }, 1500);
       } catch {
-        console.log("Error closing the websocket.");
+        logger.error("Error closing the websocket.");
         ws.terminate?.();
       } finally {
         this.emit("closed");
@@ -236,7 +237,7 @@ class CandleStickWsClient extends EventEmitter {
   _resubscribeToAll() {
     const subscriptions = this._getSubscriptions();
     for (const { symbol, interval } of subscriptions) {
-      console.log(`Resubscribing to ${symbol} (${interval})`);
+      logger.info(`Resubscribing to ${symbol} (${interval})`);
       this.subscribe(symbol, interval);
     }
   }
@@ -246,7 +247,7 @@ class CandleStickWsClient extends EventEmitter {
     if (this.subscriptions.has(key)) return;
     this.subscriptions.add(key);
     this.totalCoinsSubscribed++;
-    console.log(`Subscribed: ${symbol} (${interval})`);
+    // console.log(`Subscribed: ${symbol} (${interval})`);
   }
 
   _hasSubscription(symbol, interval) {
@@ -259,7 +260,7 @@ class CandleStickWsClient extends EventEmitter {
     if (this.subscriptions.has(key)) {
       this.subscriptions.delete(key);
       this.totalCoinsSubscribed--;
-      console.log(`Unsubscribed: ${symbol} (${interval})`);
+      //   console.log(`Unsubscribed: ${symbol} (${interval})`);
     }
   }
 
