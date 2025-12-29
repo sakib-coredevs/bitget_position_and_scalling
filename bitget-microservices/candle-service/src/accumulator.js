@@ -25,7 +25,6 @@ class Accumulator {
     //   process.exit();
     // }
     // [c1, c2]
-    if (pair === "SOLUSDT") return;
     if (data.length === 2) {
       const { candle1, candle2 } = this._get2candleFromArray(data);
       const candles = this.pairs.get(pair);
